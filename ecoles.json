@@ -1,0 +1,24 @@
+[
+    {
+        "id": 1,
+        "nom": "EPP Andoharanofotsy",
+        "type": "lycée",
+        "statut": "public",
+        "fokontany": "Andoharanofotsy",
+        "telephone": "0322649271",
+        "nb_eleves": "20",
+        "latitude": "-18.978945",
+        "longitude": "47.534494"
+    },
+    {
+        "id": 2,
+        "nom": "EPP Andoharanofotsy",
+        "type": "collège",
+        "statut": "public",
+        "fokontany": "Andoharanofotsy",
+        "telephone": "0322649271",
+        "nb_eleves": "320",
+        "latitude": -18.957719,
+        "longitude": 47.529173
+    }
+]
