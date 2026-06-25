@@ -67,3 +67,30 @@
      border-radius: 4px;
      cursor: pointer;
  }
+
+ /* Filtre pour transformer le bleu standard de Leaflet en vert */
+ .marker-user-vert {
+     filter: hue-rotate(140deg) brightness(0.9) contrast(1.2);
+ }
+
+ /* Change la couleur du texte et du fond du contenu */
+ .popup-user .leaflet-popup-content-wrapper {
+     background-color: #0bba23;
+     /* Fond user */
+     color: #ffffff;
+     /* Texte blanc pour le contraste */
+     font-weight: bold;
+     border-radius: 8px;
+     /* Arrondit les angles (optionnel) */
+ }
+
+ /* Change la couleur du petit triangle sous le popup */
+ .popup-user .leaflet-popup-tip {
+     background-color: #0bba23;
+     /* Même user */
+ }
+
+ /* Change la couleur de la croix de fermeture (optionnel) */
+ .popup-user .leaflet-popup-close-button {
+     color: #ffffff !important;
+ }

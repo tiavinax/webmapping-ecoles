@@ -53,6 +53,8 @@
             className: 'popup-rouge' // Ajoute une classe CSS personnalisée au conteneur du popup
         }).openPopup();
 
+        dessignerUser();
+
         let markers = [];
 
         async function afficherEcoles(nom = null, type = null, statut = null) {
@@ -105,6 +107,8 @@
                         const latUser = position.coords.latitude;
                         const lonUser = position.coords.longitude;
 
+                        dessignerUser();
+
                         // départ = utilisateur, arrivée = école cliquée
                         tracerRoute(latUser, lonUser, latEcole, lonEcole);
                     },
@@ -141,6 +145,26 @@
                 } catch (e) { }
                 routingControl = null;
             }
+        }
+
+        function dessignerUser() {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const latUser = position.coords.latitude;
+                const lonUser = position.coords.longitude;
+                const coordUser = [latUser, lonUser];
+
+                // Création du marqueur standard
+                const markerUser = L.marker(coordUser).addTo(map);
+
+                // Application de la classe CSS sur l'élément HTML une fois injecté
+                if (markerUser._icon) {
+                    markerUser._icon.classList.add('marker-user-vert');
+                }
+
+                markerUser.bindPopup("<p>Vous êtes ici</p>", {
+                    className: 'popup-user'
+                }).openPopup();
+            });
         }
 
         // Chargement initial
