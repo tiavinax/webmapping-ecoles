@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Écoles à Andoharanofotsy</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0
+        }
+
+        #map {
+            height: 100%
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- La div qui va contenir la carte -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const adf = [-18.9771541, 47.5329977];
+        const map = L.map('map').setView(adf, 14);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri © OpenStreetMap'
+        }).addTo(map);
+
+        const markerEcole = L.marker(adf).addTo(map);
+        markerEcole.bindPopup("<p>Andoharanofotsy</p>")
+            .openPopup();
+
+        async function recupererEcole() {
+            const response = await fetch('traitement/get_ecoles.php');
+            return response.json();
+        }
+
+        async function afficherEcoles() {
+            let markers = [];
+            const ecoles = await recupererEcole();
+
+            if (ecoles.length == 0) return;
+
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            ecoles.forEach((ecole, index) => {
+                const m = L.marker([parseFloat(ecole.latitude), parseFloat(ecole.longitude)])
+                    .bindTooltip(`<b>Ecole ${index + 1}</b><b>${ecole.nom}-${ecole.type}-${ecole.statut}-${ecole.telephone}</b>`, {
+                        permanent: true,  // ← toujours visible, pas besoin de cliquer
+                        direction: 'top'  // afficher au dessus du marker
+                    })
+                    .addTo(map);
+                markers.push(m);
+            });
+
+        }
+
+        afficherEcoles();
+
+    </script>
+
+</body>
+
+</html>

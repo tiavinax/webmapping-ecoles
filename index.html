@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Écoles à Andoharanofotsy</title>
+
+    <!-- CSS seulement dans le head -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+    <style>
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0
+        }
+
+        #map {
+            height: 100%
+        }
+
+        /* Change la couleur du texte et du fond du contenu */
+        .popup-rouge .leaflet-popup-content-wrapper {
+            background-color: #ff0000;
+            /* Fond rouge */
+            color: #ffffff;
+            /* Texte blanc pour le contraste */
+            font-weight: bold;
+            border-radius: 8px;
+            /* Arrondit les angles (optionnel) */
+        }
+
+        /* Change la couleur du petit triangle sous le popup */
+        .popup-rouge .leaflet-popup-tip {
+            background-color: #ff0000;
+            /* Même rouge */
+        }
+
+        /* Change la couleur de la croix de fermeture (optionnel) */
+        .popup-rouge .leaflet-popup-close-button {
+            color: #ffffff !important;
+        }
+
+        #filtre {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            /* laisser de la place aux boutons zoom */
+            z-index: 1000;
+            /* au dessus de la carte */
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            /* horizontal */
+            gap: 8px;
+            align-items: center;
+        }
+
+        #filtre input,
+        #filtre select {
+            padding: 6px;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #filtre button {
+            padding: 6px 12px;
+            background: #2c7be5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="filtre">
+        <input type="text" id="f-nom" placeholder="Nom de l'école" />
+        <select id="f-type">
+            <option value="">Tous les types</option>
+            <option value="primaire">Primaire</option>
+            <option value="college">Collège</option>
+            <option value="lycee">Lycée</option>
+        </select>
+        <select id="f-statut">
+            <option value="">Tous les statuts</option>
+            <option value="public">Public</option>
+            <option value="prive">Privé</option>
+        </select>
+        <button onclick="filtrer()">Rechercher</button>
+        <button onclick="reinitialiser()">Réinitialiser</button>
+
+        <span id="compteur" style="font-size:13px; color:#1eba0d;"></span>
+    </div>
+
+    <!-- La div qui va contenir la carte -->
+    <div id="map"></div>
+
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        const adf = [-18.9771541, 47.5329977];
+        const map = L.map('map').setView(adf, 14);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri © OpenStreetMap'
+        }).addTo(map);
+
+        const markerReference = L.marker(adf).addTo(map);
+
+        markerReference.bindPopup("<p>Andoharanofotsy</p>", {
+            className: 'popup-rouge' // Ajoute une classe CSS personnalisée au conteneur du popup
+        }).openPopup();
+
+        let markers = [];
+
+        async function afficherEcoles(nom = null, type = null, statut = null) {
+            // Construire l'URL avec les paramètres GET
+            const params = new URLSearchParams();
+            if (nom) params.append('nom', nom);
+            if (type) params.append('type', type);
+            if (statut) params.append('statut', statut);
+
+            const response = await fetch('traitement/get_ecoles.php?' + params.toString());
+            const ecoles = await response.json();
+
+            if (!Array.isArray(ecoles)) {
+                console.error('Erreur serveur:', ecoles.erreur);
+                return;
+            }
+
+            document.getElementById('compteur').textContent = ecoles.length + ' école(s) trouvée(s)';
+
+            // Supprimer anciens markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            //  .bindPopup(`
+            //     <b>${ecole.nom}</b><br>
+            //     Type : ${ecole.type}<br>
+            //     Statut : ${ecole.statut}<br>
+            //     Tél : ${ecole.telephone ?? 'Non renseigné'}
+            // `)
+
+            ecoles.forEach((ecole) => {
+                const latEcole = parseFloat(ecole.latitude);
+                const lonEcole = parseFloat(ecole.longitude);
+
+                const m = L.marker([parseFloat(ecole.latitude), parseFloat(ecole.longitude)])
+                    .bindTooltip(`
+                    <b>${ecole.nom}</b><br>
+                    Type : ${ecole.type}<br>
+                    Statut : ${ecole.statut}<br>
+                    Tél : ${ecole.telephone ?? 'Non renseigné'}
+                `, {
+                        permanent: true,
+                        direction: 'top'
+                    })
+                    .addTo(map);
+
+                // clic sur CE marker → routing vers cette école
+                m.on('click', function () {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        const latUser = position.coords.latitude;
+                        const lonUser = position.coords.longitude;
+
+                        // départ = utilisateur, arrivée = école cliquée
+                        tracerRoute(latUser, lonUser, latEcole, lonEcole);
+                    },
+                        function (erreur) {                            // ← erreur ici, juste après
+                            alert("Géolocalisation refusée — activez la localisation");
+                        }
+                    );
+                });
+                markers.push(m);
+            });
+        }
+
+        function filtrer() {
+            const nom = document.getElementById('f-nom').value.trim();
+            const type = document.getElementById('f-type').value;
+            const statut = document.getElementById('f-statut').value;
+            afficherEcoles(nom, type, statut);
+        }
+
+        function reinitialiser() {
+            document.getElementById('f-nom').value = '';
+            document.getElementById('f-type').value = '';
+            document.getElementById('f-statut').value = '';
+
+            refreshRoute();
+            afficherEcoles(); // recharge tout sans filtre
+        }
+
+        function refreshRoute() {
+            if (routingControl) {
+                try {
+                    routingControl.getPlan().setWaypoints([]);
+                    map.removeControl(routingControl);
+                } catch (e) { }
+                routingControl = null;
+            }
+        }
+
+        // Chargement initial
+        afficherEcoles();
+
+        let routingControl = null;
+
+        function tracerRoute(latUser, lonUser, latEcole, lonEcole) {
+            // Supprimer l'ancienne route
+            refreshRoute();
+
+            // Tracer la nouvelle route
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(latUser, lonUser),
+                    L.latLng(latEcole, lonEcole)
+                ],
+                routeWhileDragging: false,  // ← passer à false pour éviter les conflits
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                lineOptions: {
+                    styles: [{ color: '#ff0000', opacity: 0.7, weight: 5 }]
+                },
+                show: true,
+                addWaypoints: false,
+                fitSelectedRoutes: true,
+                showAlternatives: false
+            }).addTo(map);
+        }
+
+    </script>
+
+</body>
+
+</html>
